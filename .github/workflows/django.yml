@@ -27,6 +27,7 @@ jobs:
         pip install -r requirements.txt
         pip install django-tenants
         pip install django-CNPJField
+        pip install psycopg2
     - name: Run Tests
       run: |
         python manage.py test
