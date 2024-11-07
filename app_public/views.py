@@ -16,23 +16,6 @@ import json
 from datetime import datetime, timedelta
 
 
-@api_view(['GET', 'POST', 'PUT', 'DELETE'])
-def company(request):
-    if request.method == 'GET':
-        find(request)
-        
-    if request.method == 'POST':
-        response = create(request)
-        return Response(response.status_code)
-    
-    if request.method == 'PUT':
-        edit(request)
-    
-    if request.method == 'DELETE':
-        delete(request)
-            
-    return Response(status=status.HTTP_400_BAD_REQUEST)
-
 def find(request):
     try:
         if request.GET.get('id'):
@@ -47,8 +30,9 @@ def find(request):
     except:
         return Response(status=status.HTTP_400_BAD_REQUEST)
 
-@csrf_exempt
-def create(request):
+#Verificar o pq não cadastra usuário com mesmo nome
+@api_view(['POST'])
+def create_company(request):
     data = json.loads(request.body)
     
     name = data.get('name')
@@ -66,6 +50,9 @@ def create(request):
     
     if Company.objects.filter(cnpj=cnpj).exists():
         return Response('CNPJ existente', status.HTTP_400_BAD_REQUEST)
+    
+    if Client.objects.filter(schema_name=company_name).exists():
+        return Response('Nome da empresa existente', status.HTTP_400_BAD_REQUEST)
     
     if User.objects.filter(email=email).exists():
         return Response('E-mail existente', status.HTTP_400_BAD_REQUEST)
@@ -112,9 +99,9 @@ def create(request):
             )   
             user_company.save()
             
-        return Response('Account created', status.HTTP_201_CREATED)
+        return Response('Empresa cadastrada com sucesso', status.HTTP_201_CREATED)
     except ValueError as e:
-        return Response({'error': str(e)}, status.HTTP_400_BAD_REQUEST)
+        return Response(e, status.HTTP_400_BAD_REQUEST)
 
     
 def edit(request):
