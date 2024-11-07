@@ -105,6 +105,7 @@ def create_company(request):
 
     
 def edit(request):
+    # 
     data = json.loads(request.body)
     company = Company.objects.get(id=data['id'])
     serializer = CompanySerializer(company, data=data)
