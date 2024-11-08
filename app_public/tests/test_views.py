@@ -12,11 +12,11 @@ class CreateCompanyTestCase(TestCase):
         self.client = Client()
         self.create_url = reverse('create')
         self.fake_user = {
-            'name': 'Fake User',
+            'name': 'FakeUser',
             'company_name': 'Fake Company',
             'email': 'fake@example.com',
             'password': 'password123',
-            'phone': 12934567890,
+            'phone': '12934567890',
             'cnpj': '12345678901230',
             'address': '123 Test St',
             'city': 'Test City',
@@ -24,19 +24,19 @@ class CreateCompanyTestCase(TestCase):
             'postalcode': '12345'
         }
         self.valid_payload = {
-            'name': 'Test User',
+            'name': 'TestUser',
             'company_name': 'Test Company',
             'email': 'test@example.com',
             'password': 'password123',
-            'phone': 12934567890,
-            'cnpj': '12345678901234',
+            'phone': '12934567890',
+            'cnpj': '31783287000105',
             'address': '123 Test St',
             'city': 'Test City',
             'state': 'Test State',
             'postalcode': '12345'
         }
         self.invalid_payload_cnpj = {
-            'name': 'Test User',
+            'name': 'TestUser',
             'company_name': 'Test Company',
             'email': 'test@example.com',
             'password': 'password123',
@@ -48,7 +48,7 @@ class CreateCompanyTestCase(TestCase):
             'postalcode': '12345'
         }
         self.invalid_payload_email = {
-            'name': 'Test User',
+            'name': 'TestUser',
             'company_name': 'Test Company',
             'email': 'fake@example.com',
             'password': 'password123',
@@ -67,13 +67,14 @@ class CreateCompanyTestCase(TestCase):
         )
 
     def test_create_company_success(self):
-        print(self.valid_payload)
         response = self.client.post(
             self.create_url,
             data=json.dumps(self.valid_payload),
             content_type='application/json'
         )
+
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data, 'Empresa cadastrada com sucesso')
 
     def test_create_company_existing_cnpj(self):
         response = self.client.post(
