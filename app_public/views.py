@@ -11,26 +11,15 @@ from django.contrib import auth
 from django.contrib.auth.decorators import login_required
 from django_tenants.utils import get_tenant_model
 from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
+from rest_framework.authtoken.models import Token
+from datetime import timedelta, date
 
 import json
-from datetime import datetime, timedelta, date
 
-
-def find(request):
-    try:
-        if request.GET.get('id'):
-            id = request.GET.get('id')
-            
-            try:
-                company = Company.objects.get(id=id)
-                serializer = CompanySerializer(company)
-                return Response(serializer.data)
-            except Company.DoesNotExist:
-                return Response(status=status.HTTP_404_NOT_FOUND)
-    except:
-        return Response(status=status.HTTP_400_BAD_REQUEST)
 
 #Verificar o pq não cadastra usuário com mesmo nome
+# Verificar se está criptografando a senha
 @api_view(['POST'])
 def create_company(request):
     data = json.loads(request.body)
@@ -133,7 +122,7 @@ def create_company(request):
         return Response(e, status.HTTP_400_BAD_REQUEST)
 
     
-def edit(request):
+def edit_company(request):
     data = json.loads(request.body)
     company = Company.objects.get(id=data['id'])
     serializer = CompanySerializer(company, data=data)
@@ -143,53 +132,29 @@ def edit(request):
         return Response(serializer.data)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-def delete(request):
-    try:
-        if request.GET.get('id'):
-            id = request.GET.get('id')
-            
-            try:
-                company = Company.objects.get(id=id)
-                company.delete()
-            except Company.DoesNotExist:
-                return Response(status=status.HTTP_404_NOT_FOUND)
-    except:
-        return Response(status=status.HTTP_400_BAD_REQUEST)
-   
-@api_view(['POST']) 
-def login(request):
+def edit_user(request):
     data = json.loads(request.body)
-    email = data.get('email')
-    password = data.get('password')
+    user = User.objects.get(id=data['id'])
+    serializer = UserSerealizer(user, data=data)
     
-    user = auth.authenticate(
-        request,
-        username=email,
-        password=password
-    )
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+   
+@api_view(['POST'])
+def create_token(request):
+    user = get_object_or_404(User, email=request.data['email'])
+    
+    if not user.check_password(request.data['password']):
+        return Response('Senha incorreta', status.HTTP_404_NOT_FOUND)
+
+    token, created = Token.objects.get_or_create(user=user)     
         
-    if user is None:
-        return Response("Login failed", status.HTTP_401_UNAUTHORIZED)
-    
-    auth.login(request, user)
-    session_key = request.session.session_key
-    
-    return JsonResponse({
-        "message": "Login successful",
-        "session_key": session_key
-    }, status=status.HTTP_200_OK)
+    return Response({'token': token.key}, status.HTTP_201_CREATED)
 
-@api_view(['POST']) 
-def logout(request):
-    auth.logout(request)
-    return Response("Logout successful")
 
-@api_view(['GET'])
-@login_required
-def get_tenant(request):
-    schema = get_tenant_model()
-    print(schema)
-    # return Response(schema.schema_name)
+
 
 
     
