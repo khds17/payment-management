@@ -2,9 +2,8 @@ from django.test import TestCase, Client
 from django.urls import reverse
 from django.contrib.auth.models import User
 from rest_framework import status
-from ..models import Company, Address, UserCompany, Client as Tenant
+from ..models import Client
 import json
-from datetime import datetime, timedelta
 
 
 class CreateCompanyTestCase(TestCase):
