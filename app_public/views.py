@@ -1,16 +1,12 @@
-from django.shortcuts import render
-from rest_framework.decorators import api_view
-from django.views.decorators.csrf import csrf_exempt
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from rest_framework.authentication import SessionAuthentication, TokenAuthentication
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from django.db import transaction
 from .models import *
 from django.contrib.auth.models import User
 from .serializer import *
-from django.contrib import auth
-from django.contrib.auth.decorators import login_required
-from django_tenants.utils import get_tenant_model
-from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from rest_framework.authtoken.models import Token
 from datetime import timedelta, date
@@ -24,7 +20,8 @@ import json
 def create_company(request):
     data = json.loads(request.body)
     
-    company_name = data.get('company_name').lower().replace(' ', '_')
+    company_name = data.get('company_name')
+    schema_name = data.get('company_name').lower().replace(' ', '_')
     name = data.get('name')
     email = data.get('email')
     password = data.get('password')
@@ -36,7 +33,7 @@ def create_company(request):
     cnpj = data.get('cnpj')
             
     company_data = {
-        'schema_name': company_name,
+        'schema_name': schema_name,
         'name': company_name,
         'paid_until': date.today()  + timedelta(days=13),
         'on_trial': True
@@ -121,16 +118,37 @@ def create_company(request):
     except ValueError as e:
         return Response(e, status.HTTP_400_BAD_REQUEST)
 
-    
+
+@api_view(['PUT'])
+@authentication_classes([SessionAuthentication, TokenAuthentication])
+@permission_classes([IsAuthenticated])
 def edit_company(request):
-    data = json.loads(request.body)
-    company = Company.objects.get(id=data['id'])
-    serializer = CompanySerializer(company, data=data)
+    try:
+        company = get_company(request.user.id)
+        address = Address.objects.get(id=company.address_id)
+    except Company.DoesNotExist:
+        return Response({'error': 'Empresa não encontrada'}, status=status.HTTP_404_NOT_FOUND)
+    except Address.DoesNotExist:
+        return Response({'error': 'Endereço não encontrado'}, status=status.HTTP_404_NOT_FOUND)
     
-    if serializer.is_valid():
-        serializer.save()
-        return Response(serializer.data)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    data = request.data
+
+    # Manually update the fields
+    company.name = data.get('company_name', company.name)
+    company.cnpj = data.get('cnpj', company.cnpj)
+    company.phone = data.get('phone', company.phone)
+    address.address = data.get('address', address.address)
+    address.city = data.get('city', address.city)   
+    address.state = data.get('state', address.state)
+    address.postalcode = data.get('postalcode', address.postalcode)
+
+    try:
+        company.save()
+        address.save()
+        return Response({'message': 'Empresa atualizada com sucesso'},
+        status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 def edit_user(request):
     data = json.loads(request.body)
@@ -152,6 +170,17 @@ def create_token(request):
     token, created = Token.objects.get_or_create(user=user)     
         
     return Response({'token': token.key}, status.HTTP_201_CREATED)
+
+def get_company(data):
+    print(data)
+    
+    user_company = UserCompany.objects.get(user=data)
+    
+    company = Company.objects.get(id=user_company.company.id)
+    
+    return company
+
+
 
 
 
