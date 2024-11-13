@@ -40,7 +40,6 @@ SHARED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework.authtoken',
-    
     'corsheaders',
     'app_public.apps.AppPublicConfig',
     'cnpj_field'

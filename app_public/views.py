@@ -16,6 +16,7 @@ import json
 
 #Verificar o pq não cadastra usuário com mesmo nome
 # Verificar se está criptografando a senha
+# Está criando o tenant mesmo com erro.
 @api_view(['POST'])
 def create_company(request):
     data = json.loads(request.body)
@@ -172,7 +173,6 @@ def create_token(request):
     return Response({'token': token.key}, status.HTTP_201_CREATED)
 
 def get_company(data):
-    print(data)
     
     user_company = UserCompany.objects.get(user=data)
     
