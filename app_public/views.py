@@ -179,19 +179,3 @@ def get_company(data):
     company = Company.objects.get(id=user_company.company.id)
     
     return company
-
-
-
-
-
-
-
-    
-    
-
-
-
-
-
-
-
