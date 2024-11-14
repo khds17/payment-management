@@ -45,6 +45,113 @@ def create_service(request):
             return Response('Serviço cadastrado com sucesso', status.HTTP_201_CREATED)
         except ValueError as e:
             return Response(e, status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+@authentication_classes([SessionAuthentication, TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def get_all_services(request):
+    tenant = get_tenant(request.user.id)
+    id = request.data.get('name')
+    
+    with schema_context(tenant.schema_name):
+        services = Service.objects.all()
+
+        service_serializer = ServiceSerializer(services, many=True)
+
+        return Response(service_serializer.data, status=status.HTTP_200_OK)
+    
+@api_view(['PUT'])    
+@authentication_classes([SessionAuthentication, TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def edit_service(request):
+    data = json.loads(request.body)
+    
+    tenant = get_tenant(request.user.id)
+    
+    id = data.get('id')
+    name = data.get('name')
+    description = data.get('description')
+    service_status = data.get('status')
+    
+    service = {
+        'name': name,
+        'description': description,
+        'status': service_status
+    }
+    
+    with schema_context(tenant.schema_name):
+        try:
+            service = Service.objects.get(id=id)
+        except Service.DoesNotExist:
+            return Response('Serviço não encontrado', status=status.HTTP_404_NOT_FOUND)
+        
+        service_serializer = ServiceSerializer(service, data=data)
+
+        if service_serializer.is_valid():
+            service_serializer.save()
+            return Response('Serviço alterado com sucesso', status=status.HTTP_200_OK)
+        else:
+            return Response(service_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+@authentication_classes([SessionAuthentication, TokenAuthentication])
+@permission_classes([IsAuthenticated])        
+def create_plan(request):
+    data = json.loads(request.body)
+    tenant = get_tenant(request.user.id)
+    
+    plan_data = {
+        'name': data.get('name'),
+        'description': data.get('description'),
+    }
+    
+    plan_services_data = data.get('services')
+               
+    with schema_context(tenant.schema_name):
+        if Plan.objects.filter(name=data.get('name')).exists():
+            return Response('Plano com nome existente', status.HTTP_400_BAD_REQUEST)  
+        
+    
+        try:
+            with transaction.atomic():
+                plan_serializer = PlanSerializer(data=plan_data)
+                
+                if plan_serializer.is_valid():
+                    plan = plan_serializer.save()
+                else:
+                    return Response(plan_serializer.errors, status.HTTP_400_BAD_REQUEST)
+        except ValueError as e:
+            return Response(e, status.HTTP_400_BAD_REQUEST)
+               
+        try:
+            with transaction.atomic():               
+                for service in plan_services_data:       
+                    service_id = service.get('id')
+                    price = service.get('price')
+                    quantity = service.get('quantity')
+                    description = service.get('description')
+
+                    try:
+                        service = Service.objects.get(id=service_id)
+                    except Service.DoesNotExist:
+                        return Response({'error': 'Serviço não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
+                    if price is None or quantity is None:
+                        return Response({'error': 'Price and quantity are required'}, status=status.HTTP_400_BAD_REQUEST)
+                                   
+                    PlanService.objects.create(
+                        plan=plan, 
+                        service=service,
+                        price=price,
+                        quantity = quantity,
+                        total=round(price * quantity, 2),
+                        description=description
+                    )
+        except ValueError as e:
+            return Response('Plano não encontrado', status.HTTP_404_NOT_FOUND)
+        
+    return Response('Plano cadastrado com sucesso', status.HTTP_201_CREATED)
+
     
 def get_tenant(data):
     
