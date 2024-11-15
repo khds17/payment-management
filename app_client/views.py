@@ -99,19 +99,26 @@ def edit_service(request):
 def create_plan(request):
     data = json.loads(request.body)
     tenant = get_tenant(request.user.id)
+    plan_name = data.get('name')
+    plan_description = data.get('description')
     
+    if plan_name is None:
+        return Response('Nome do plano é obrigatório', status.HTTP_400_BAD_REQUEST)
+        
     plan_data = {
-        'name': data.get('name'),
-        'description': data.get('description'),
+        'name': plan_name,
+        'description': plan_description,
     }
     
     plan_services_data = data.get('services')
+    
+    if plan_services_data is None:
+        return Response('Serviços são obrigatórios', status.HTTP_400_BAD_REQUEST)
                
-    with schema_context(tenant.schema_name):
-        if Plan.objects.filter(name=data.get('name')).exists():
+    with schema_context(tenant.schema_name):    
+        if Plan.objects.filter(name=plan_name).exists():
             return Response('Plano com nome existente', status.HTTP_400_BAD_REQUEST)  
         
-    
         try:
             with transaction.atomic():
                 plan_serializer = PlanSerializer(data=plan_data)
@@ -120,16 +127,13 @@ def create_plan(request):
                     plan = plan_serializer.save()
                 else:
                     return Response(plan_serializer.errors, status.HTTP_400_BAD_REQUEST)
-        except ValueError as e:
-            return Response(e, status.HTTP_400_BAD_REQUEST)
-               
-        try:
-            with transaction.atomic():               
-                for service in plan_services_data:       
+                           
+                for service in plan_services_data:  
                     service_id = service.get('id')
                     price = service.get('price')
                     quantity = service.get('quantity')
                     description = service.get('description')
+                    total = round(price * quantity, 2)
 
                     try:
                         service = Service.objects.get(id=service_id)
@@ -137,22 +141,66 @@ def create_plan(request):
                         return Response({'error': 'Serviço não encontrado'}, status=status.HTTP_404_NOT_FOUND)
 
                     if price is None or quantity is None:
-                        return Response({'error': 'Price and quantity are required'}, status=status.HTTP_400_BAD_REQUEST)
-                                   
+                        return Response({'error': 'Preço e quantidade são obrigatórios'}, status=status.HTTP_400_BAD_REQUEST)
+                    
                     PlanService.objects.create(
-                        plan=plan, 
-                        service=service,
                         price=price,
-                        quantity = quantity,
-                        total=round(price * quantity, 2),
-                        description=description
+                        quantity=quantity,
+                        total=total,
+                        description=description,
+                        plan=plan,
+                        service=service
                     )
         except ValueError as e:
-            return Response('Plano não encontrado', status.HTTP_404_NOT_FOUND)
+            return Response(e, status.HTTP_404_NOT_FOUND)
         
     return Response('Plano cadastrado com sucesso', status.HTTP_201_CREATED)
 
+@api_view(['GET'])
+@authentication_classes([SessionAuthentication, TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def get_all_plans(request):
+    tenant = get_tenant(request.user.id)
     
+    with schema_context(tenant.schema_name):
+        plans = Plan.objects.all()
+
+        plan_serializer = PlanSerializer(plans, many=True)
+
+        return Response(plan_serializer.data, status=status.HTTP_200_OK)
+
+# @api_view(['POST'])
+# @authentication_classes([SessionAuthentication, TokenAuthentication])
+# @permission_classes([IsAuthenticated])    
+# def edit_plan(request):
+#     data = json.loads(request.body)
+    
+#     tenant = get_tenant(request.user.id)
+    
+#     id = data.get('id')
+#     name = data.get('name')
+#     description = data.get('description')
+#     services = data.get('services')
+    
+#     plan = {
+#         'name': name,
+#         'description': description,
+#     }
+    
+#     with schema_context(tenant.schema_name):
+#         try:
+#             plan = Plan.objects.get(id=id)
+#         except Plan.DoesNotExist:
+#             return Response('Plano não encontrado', status=status.HTTP_404_NOT_FOUND)
+        
+#         plan_serializer = PlanSerializer(plan, data=data)
+
+#         if plan_serializer.is_valid():
+#             plan_serializer.save()
+#             return Response('Plano alterado com sucesso', status=status.HTTP_200_OK)
+#         else:
+#             return Response(plan_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 def get_tenant(data):
     
     user_company = UserCompany.objects.get(user=data)
