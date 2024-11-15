@@ -200,6 +200,24 @@ def edit_plan(request):
         else:
             return Response(plan_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+@api_view(['GET'])
+@authentication_classes([SessionAuthentication, TokenAuthentication])
+@permission_classes([IsAuthenticated])            
+def get_all_plan_services(request):
+    tenant = get_tenant(request.user.id)
+    id = request.GET.get('id')
+    
+    with schema_context(tenant.schema_name):
+        try:
+            plan = Plan.objects.get(id=id)
+        except Plan.DoesNotExist:
+            return Response({'error': 'Plano não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+        
+        plan_services = PlanService.objects.filter(plan=plan)
+        plan_service_serializer = PlanServiceSerializer(plan_services, many=True)
+
+        return Response(plan_service_serializer.data, status=status.HTTP_200_OK)
+
 def get_tenant(data):
     
     user_company = UserCompany.objects.get(user=data)

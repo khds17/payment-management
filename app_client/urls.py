@@ -8,4 +8,5 @@ urlpatterns = [
     path('plan/create', views.create_plan, name='create_plan'),
     path('plan/get', views.get_all_plans, name='get_all_plans'),
     path('plan/edit', views.edit_plan, name='edit_plan'),
+    path('plan/service/get', views.get_all_plan_services, name='get_all_plan_services'),
 ]
