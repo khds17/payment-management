@@ -522,4 +522,139 @@ class GetAllPlansTestCase(TestCase):
             content_type='application/json'
         )
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        
+class EditPlanTestCase(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.create_plan_url = reverse('create_plan')
+        self.edit_plan_url = reverse('edit_plan')
+        self.create_url = reverse('create')
+        self.create_service_url = reverse('create_service')
+        self.fake_user = {
+            'name': 'FakeUser',
+            'company_name': 'Fake Company',
+            'email': 'fake@example.com',
+            'password': 'password123',
+            'phone': '12934567890',
+            'cnpj': '12345678901230',
+            'address': '123 Test St',
+            'city': 'Test City',
+            'state': 'Test State',
+            'postalcode': '12345'
+        }
+        self.service_one = {
+            'name': 'Test Service',
+            'description': 'Test Description'
+        }
+        self.service_two = {
+            'name': 'Test Service 2',
+            'description': 'Test Description'
+        }
+        self.plan = {
+            'name': 'Test Plan',
+            'description': 'Test Description',
+            'services': [
+                {
+                    'id': 1,
+                    'price': 100.0,
+                    'quantity': 2,
+                    'description': 'Service Description'
+                },
+                {
+                    'id': 2,
+                    'price': 300.0,
+                    'quantity': 2,
+                    'description': 'Service Description'
+                }
+            ]
+        }
+        self.valid_payload = {
+            'id': 1,
+            'name': 'Updated Plan',
+            'description': 'Updated Description'
+        }
+        self.invalid_payload_missing_name = {
+            'id': 1,
+            'description': 'Updated Description'
+        }
+        self.invalid_payload_nonexistent_id = {
+            'id': 999,
+            'name': 'Nonexistent Plan',
+            'description': 'Nonexistent Description'
+        }
+
+        self.client.post(
+            self.create_url,
+            data=json.dumps(self.fake_user),
+            content_type='application/json'
+        )
+        
+        self.token_url = reverse('token')
+        self.token = self.client.post(
+            self.token_url,
+            data=json.dumps({'email': 'fake@example.com', 'password': 'password123'}),
+            content_type='application/json'
+        )
+        
+        self.client.post(
+            self.create_service_url,
+            data=json.dumps(self.service_one),
+            content_type='application/json',
+            headers={'Authorization': f"Token {self.token.data['token']}"}
+        )
+        
+        self.client.post(
+            self.create_service_url,
+            data=json.dumps(self.service_two),
+            content_type='application/json',
+            headers={'Authorization': f"Token {self.token.data['token']}"}
+        )
+        
+        self.client.post(
+            self.create_plan_url,
+            data=json.dumps(self.plan),
+            content_type='application/json',
+            headers={'Authorization': f"Token {self.token.data['token']}"}
+        )
+
+    def test_edit_plan_success(self):
+        response = self.client.put(
+            self.edit_plan_url,
+            data=json.dumps(self.valid_payload),
+            content_type='application/json',
+            headers={'Authorization': f"Token {self.token.data['token']}"}
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, 'Plano alterado com sucesso')
+
+    def test_edit_plan_missing_name(self):
+        response = self.client.put(
+            self.edit_plan_url,
+            data=json.dumps(self.invalid_payload_missing_name),
+            content_type='application/json',
+            headers={'Authorization': f"Token {self.token.data['token']}"}
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('name', response.data)
+
+    def test_edit_plan_nonexistent_id(self):
+        response = self.client.put(
+            self.edit_plan_url,
+            data=json.dumps(self.invalid_payload_nonexistent_id),
+            content_type='application/json',
+            headers={'Authorization': f"Token {self.token.data['token']}"}
+        )
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data, 'Plano não encontrado')
+
+    def test_edit_plan_wrong_token(self):
+        response = self.client.put(
+            self.edit_plan_url,
+            data=json.dumps(self.valid_payload),
+            content_type='application/json',
+            headers={'Authorization': 'Token 3be1db43f5107736135956946f4a35f1031fba82'}
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['detail'], 'Invalid token.')
+
 

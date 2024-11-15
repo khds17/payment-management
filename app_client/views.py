@@ -168,38 +168,37 @@ def get_all_plans(request):
         plan_serializer = PlanSerializer(plans, many=True)
 
         return Response(plan_serializer.data, status=status.HTTP_200_OK)
-
-# @api_view(['POST'])
-# @authentication_classes([SessionAuthentication, TokenAuthentication])
-# @permission_classes([IsAuthenticated])    
-# def edit_plan(request):
-#     data = json.loads(request.body)
     
-#     tenant = get_tenant(request.user.id)
+@api_view(['PUT'])
+@authentication_classes([SessionAuthentication, TokenAuthentication])
+@permission_classes([IsAuthenticated])    
+def edit_plan(request):
+    data = json.loads(request.body)
     
-#     id = data.get('id')
-#     name = data.get('name')
-#     description = data.get('description')
-#     services = data.get('services')
+    tenant = get_tenant(request.user.id)
     
-#     plan = {
-#         'name': name,
-#         'description': description,
-#     }
+    id = data.get('id')
+    name = data.get('name')
+    description = data.get('description')
     
-#     with schema_context(tenant.schema_name):
-#         try:
-#             plan = Plan.objects.get(id=id)
-#         except Plan.DoesNotExist:
-#             return Response('Plano não encontrado', status=status.HTTP_404_NOT_FOUND)
+    plan = {
+        'name': name,
+        'description': description,
+    }
+    
+    with schema_context(tenant.schema_name):
+        try:
+            plan = Plan.objects.get(id=id)
+        except Plan.DoesNotExist:
+            return Response('Plano não encontrado', status=status.HTTP_404_NOT_FOUND)
         
-#         plan_serializer = PlanSerializer(plan, data=data)
+        plan_serializer = PlanSerializer(plan, data=data)
 
-#         if plan_serializer.is_valid():
-#             plan_serializer.save()
-#             return Response('Plano alterado com sucesso', status=status.HTTP_200_OK)
-#         else:
-#             return Response(plan_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        if plan_serializer.is_valid():
+            plan_serializer.save()
+            return Response('Plano alterado com sucesso', status=status.HTTP_200_OK)
+        else:
+            return Response(plan_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 def get_tenant(data):
     
