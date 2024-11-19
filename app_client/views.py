@@ -217,6 +217,58 @@ def get_all_plan_services(request):
         plan_service_serializer = PlanServiceSerializer(plan_services, many=True)
 
         return Response(plan_service_serializer.data, status=status.HTTP_200_OK)
+    
+@api_view(['POST'])
+@authentication_classes([SessionAuthentication, TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def add_service_to_plan(request):
+    data = json.loads(request.body)
+    
+    tenant = get_tenant(request.user.id)
+        
+    if data.get('plan_id') is None:
+        return Response({'error': 'ID do plano é um campo obrigatório'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    if data.get('service_id') is None:
+        return Response({'error': 'ID do serviço é um campo obrigatório'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    if data.get('price') is None:
+        return Response({'error': 'Preço é um campo obrigatório'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    if data.get('quantity') is None:
+        return Response({'error': 'Quantidade é um campo obrigatório'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    plan_id = data.get('plan_id')
+    service_id = data.get('service_id')
+    price = data.get('price')
+    quantity = data.get('quantity')
+    description = data.get('description')
+    total = round(price * quantity, 2)
+        
+    with schema_context(tenant.schema_name):
+        try:
+            plan = Plan.objects.get(id=plan_id)
+        except Plan.DoesNotExist:
+            return Response({'error': 'Plano não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+        
+        try:
+            service = Service.objects.get(id=service_id)
+        except Service.DoesNotExist:
+            return Response({'error': 'Serviço não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+        
+        try:
+            PlanService.objects.create(
+                price=price,
+                quantity=quantity,
+                total=total,
+                description=description,
+                plan=plan,
+                service=service
+            )  
+            return Response('Serviço adicionado ao plano com sucesso', status=status.HTTP_201_CREATED)
+        except ValueError as e:
+            return Response(e, status=status.HTTP_400_BAD_REQUEST)
+    
 
 def get_tenant(data):
     

@@ -11,7 +11,7 @@ class Service(models.Model):
         verbose_name_plural = 'Services'
         
     def __str__(self):
-        return f'{self.name}, {self.price}'
+        return f'{self.name}'
     
 class Plan(models.Model):
     name = models.CharField(max_length=100)

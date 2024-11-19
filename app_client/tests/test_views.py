@@ -776,6 +776,206 @@ class GetAllPlanServicesTestCase(TestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['detail'], 'Invalid token.')
+        
+class AddServiceToPlanTestCase(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.add_service_to_plan_url = reverse('add_service_to_plan')
+        self.create_url = reverse('create')
+        self.create_service_url = reverse('create_service')
+        self.create_plan_url = reverse('create_plan')
+        self.fake_user = {
+            'name': 'FakeUser',
+            'company_name': 'Fake Company',
+            'email': 'fake@example.com',
+            'password': 'password123',
+            'phone': '12934567890',
+            'cnpj': '12345678901230',
+            'address': '123 Test St',
+            'city': 'Test City',
+            'state': 'Test State',
+            'postalcode': '12345'
+        }
+        self.service_one = {
+            'name': 'Test Service',
+            'description': 'Test Description'
+        }
+        self.service_two = {
+            'name': 'Test Service 2',
+            'description': 'Test Description'
+        }
+        self.plan = {
+            'name': 'Test Plan',
+            'description': 'Test Description',
+            'services': [
+                {
+                    'id': 1,
+                    'price': 100.0,
+                    'quantity': 2,
+                    'description': 'Service Description'
+                },
+            ]
+        }
+        self.valid_payload = {
+            'plan_id': 1,
+            'service_id': 2,
+            'price': 100.0,
+            'quantity': 2,
+            'description': 'Service Description'
+        }
+        self.invalid_payload_nonexistent_plan = {
+            'plan_id': 999,
+            'service_id': 1,
+            'price': 100.0,
+            'quantity': 2,
+            'description': 'Service Description'
+        }
+        self.invalid_payload_nonexistent_service = {
+            'plan_id': 1,
+            'service_id': 999,
+            'price': 100.0,
+            'quantity': 2,
+            'description': 'Service Description'
+        }
+        self.invalid_payload_missing_plan_id = {
+            'service_id': 2,
+            'price': 200,
+            'quantity': 2,
+            'description': 'Service Description'
+        }
+        self.invalid_payload_missing_service_id = {
+            'plan_id': 1,
+            'price': 300,
+            'quantity': 2,
+            'description': 'Service Description'
+        }
+        self.invalid_payload_missing_price = {
+            'plan_id': 1,
+            'service_id': 2,
+            'quantity': 2,
+            'description': 'Service Description'
+        }
+        self.invalid_payload_missing_quantity = {
+            'plan_id': 1,
+            'service_id': 2,
+            'price': 100,
+            'description': 'Service Description'
+        }
+
+        self.client.post(
+            self.create_url,
+            data=json.dumps(self.fake_user),
+            content_type='application/json'
+        )
+        
+        self.token_url = reverse('token')
+        self.token = self.client.post(
+            self.token_url,
+            data=json.dumps({'email': 'fake@example.com', 'password': 'password123'}),
+            content_type='application/json'
+        )
+        
+        self.client.post(
+            self.create_service_url,
+            data=json.dumps(self.service_one),
+            content_type='application/json',
+            headers={'Authorization': f"Token {self.token.data['token']}"}
+        )
+        
+        self.client.post(
+            self.create_service_url,
+            data=json.dumps(self.service_two),
+            content_type='application/json',
+            headers={'Authorization': f"Token {self.token.data['token']}"}
+        )
+        
+        self.client.post(
+            self.create_plan_url,
+            data=json.dumps(self.plan),
+            content_type='application/json',
+            headers={'Authorization': f"Token {self.token.data['token']}"}
+        )
+
+    def test_add_service_to_plan_success(self):
+        response = self.client.post(
+            self.add_service_to_plan_url,
+            data=json.dumps(self.valid_payload),
+            content_type='application/json',
+            headers={'Authorization': f"Token {self.token.data['token']}"}
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data, 'Serviço adicionado ao plano com sucesso')
+
+    def test_add_service_to_plan_nonexistent_plan(self):
+        response = self.client.post(
+            self.add_service_to_plan_url,
+            data=json.dumps(self.invalid_payload_nonexistent_plan),
+            content_type='application/json',
+            headers={'Authorization': f"Token {self.token.data['token']}"}
+        )
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data['error'], 'Plano não encontrado')
+
+    def test_add_service_to_plan_nonexistent_service(self):
+        response = self.client.post(
+            self.add_service_to_plan_url,
+            data=json.dumps(self.invalid_payload_nonexistent_service),
+            content_type='application/json',
+            headers={'Authorization': f"Token {self.token.data['token']}"}
+        )
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data['error'], 'Serviço não encontrado')
+        
+    def test_add_service_to_plan_missing_plan_id(self):
+        response = self.client.post(
+            self.add_service_to_plan_url,
+            data=json.dumps(self.invalid_payload_missing_plan_id),
+            content_type='application/json',
+            headers={'Authorization': f"Token {self.token.data['token']}"}
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['error'], 'ID do plano é um campo obrigatório')
+        
+    def test_add_service_to_plan_missing_price(self):
+        response = self.client.post(
+            self.add_service_to_plan_url,
+            data=json.dumps(self.invalid_payload_missing_service_id),
+            content_type='application/json',
+            headers={'Authorization': f"Token {self.token.data['token']}"}
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['error'], 'ID do serviço é um campo obrigatório')
+
+    def test_add_service_to_plan_missing_price(self):
+        response = self.client.post(
+            self.add_service_to_plan_url,
+            data=json.dumps(self.invalid_payload_missing_price),
+            content_type='application/json',
+            headers={'Authorization': f"Token {self.token.data['token']}"}
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['error'], 'Preço é um campo obrigatório')
+        
+    def test_add_service_to_plan_missing_quantity(self):
+        response = self.client.post(
+            self.add_service_to_plan_url,
+            data=json.dumps(self.invalid_payload_missing_quantity),
+            content_type='application/json',
+            headers={'Authorization': f"Token {self.token.data['token']}"}
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['error'], 'Quantidade é um campo obrigatório')
+
+    def test_add_service_to_plan_wrong_token(self):
+        response = self.client.post(
+            self.add_service_to_plan_url,
+            data=json.dumps(self.valid_payload),
+            content_type='application/json',
+            headers={'Authorization': 'Token 3be1db43f5107736135956946f4a35f1031fba82'}
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['detail'], 'Invalid token.')
+
 
 
 
