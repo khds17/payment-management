@@ -22,7 +22,7 @@ def create_company(request):
     data = json.loads(request.body)
     
     company_name = data.get('company_name')
-    schema_name = data.get('company_name').lower().replace(' ', '_')
+    schema_name = data.get('company_name')
     name = data.get('name')
     email = data.get('email')
     password = data.get('password')
@@ -32,7 +32,39 @@ def create_company(request):
     postalcode = data.get('postalcode')
     phone = data.get('phone')
     cnpj = data.get('cnpj')
-            
+    
+    if company_name is None:
+        return Response({'error': 'Nome da empresa é obrigatório'}, status.HTTP_400_BAD_REQUEST)
+    
+    if name is None:
+        return Response({'error': 'Nome do usuário é obrigatório'}, status.HTTP_400_BAD_REQUEST)
+    
+    if email is None:
+        return Response({'error': 'E-mail é obrigatório'}, status.HTTP_400_BAD_REQUEST)
+    
+    if password is None:
+        return Response({'error': 'Senha é obrigatória'}, status.HTTP_400_BAD_REQUEST)
+    
+    if address is None:
+        return Response({'error': 'Endereço é obrigatório'}, status.HTTP_400_BAD_REQUEST)
+    
+    if city is None:
+        return Response({'error':'Cidade é obrigatória'}, status.HTTP_400_BAD_REQUEST)
+    
+    if state is None:
+        return Response({'error': 'Estado é obrigatório'}, status.HTTP_400_BAD_REQUEST)
+    
+    if postalcode is None:
+        return Response({'error': 'CEP é obrigatório'}, status.HTTP_400_BAD_REQUEST)
+    
+    if phone is None:
+        return Response({'error': 'Telefone é obrigatório'}, status.HTTP_400_BAD_REQUEST)
+    
+    if cnpj is None:
+        return Response({'error': 'CNPJ é obrigatório'}, status.HTTP_400_BAD_REQUEST)
+    
+    schema_name = schema_name.replace(' ', '_').lower()
+                
     company_data = {
         'schema_name': schema_name,
         'name': company_name,

@@ -33,7 +33,116 @@ class CreateCompanyTestCase(TestCase):
             'state': 'Test State',
             'postalcode': '12345'
         }
-        self.invalid_payload_cnpj = {
+        self.invalid_payload_missing_user_name = {
+            'company_name': 'Test Company',
+            'email': 'test@example.com',
+            'password': 'password123',
+            'phone': 1234567890,
+            'cnpj': '12345678901230',
+            'address': '123 Test St',
+            'city': 'Test City',
+            'state': 'Test State',
+            'postalcode': '12345'
+        }
+        self.invalid_payload_missing_company_name = {
+            'name': 'Test Company',
+            'email': 'test@example.com',
+            'password': 'password123',
+            'phone': 1234567890,
+            'cnpj': '12345678901230',
+            'address': '123 Test St',
+            'city': 'Test City',
+            'state': 'Test State',
+            'postalcode': '12345'
+        }
+        self.invalid_payload_missing_email = {
+            'name': 'Test Company',
+            'company_name': 'Test Company',
+            'password': 'password123',
+            'phone': 1234567890,
+            'cnpj': '12345678901230',
+            'address': '123 Test St',
+            'city': 'Test City',
+            'state': 'Test State',
+            'postalcode': '12345'
+        }
+        self.invalid_payload_missing_password = {
+            'name': 'Test Company',
+            'company_name': 'Test Company',
+            'email': 'test@example.com',
+            'phone': 1234567890,
+            'cnpj': '12345678901230',
+            'address': '123 Test St',
+            'city': 'Test City',
+            'state': 'Test State',
+            'postalcode': '12345'
+        }
+        self.invalid_payload_missing_cnpj = {
+            'name': 'Test Company',
+            'company_name': 'Test Company',
+            'email': 'test@example.com',
+            'password': 'password123',
+            'phone': 1234567890,
+            'address': '123 Test St',
+            'city': 'Test City',
+            'state': 'Test State',
+            'postalcode': '12345'
+        }
+        self.invalid_payload_missing_phone = {
+            'name': 'Test Company',
+            'company_name': 'Test Company',
+            'email': 'test@example.com',
+            'password': 'password123',
+            'cnpj': '12345678901230',
+            'address': '123 Test St',
+            'city': 'Test City',
+            'state': 'Test State',
+            'postalcode': '12345'
+        }
+        self.invalid_payload_missing_address = {
+            'name': 'Test Company',
+            'company_name': 'Test Company',
+            'email': 'test@example.com',
+            'password': 'password123',
+            'phone': 1234567890,
+            'city': 'Test City',
+            'state': 'Test State',
+            'postalcode': '12345'
+        }
+        self.invalid_payload_missing_city = {
+            'name': 'TestUser',
+            'company_name': 'Test Company',
+            'email': 'test@example.com',
+            'password': 'password123',
+            'phone': '12934567890',
+            'cnpj': '31783287000105',
+            'address': '123 Test St',
+            'state': 'Test State',
+            'postalcode': '12345'
+        }
+        self.invalid_payload_missing_state = {
+            'name': 'TestUser',
+            'company_name': 'Test Company',
+            'email': 'test@example.com',
+            'password': 'password123',
+            'phone': '12934567890',
+            'cnpj': '31783287000105',
+            'address': '123 Test St',
+            'city': 'Test City',
+            'postalcode': '12345'
+        }
+        self.invalid_payload_missing_postalcode = {
+            'name': 'TestUser',
+            'company_name': 'Test Company',
+            'email': 'test@example.com',
+            'password': 'password123',
+            'phone': '12934567890',
+            'cnpj': '31783287000105',
+            'address': '123 Test St',
+            'city': 'Test City',
+            'state': 'Test State'
+        }
+        self.invalid_payload_existing_cnpj = {
             'name': 'TestUser',
             'company_name': 'Test Company',
             'email': 'test@example.com',
@@ -45,7 +154,7 @@ class CreateCompanyTestCase(TestCase):
             'state': 'Test State',
             'postalcode': '12345'
         }
-        self.invalid_payload_email = {
+        self.invalid_payload_existing_email = {
             'name': 'TestUser',
             'company_name': 'Test Company',
             'email': 'fake@example.com',
@@ -73,11 +182,101 @@ class CreateCompanyTestCase(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data, 'Empresa cadastrada com sucesso')
+        
+    def test_create_company_missing_company_name(self):
+        response = self.client.post(
+            self.create_url,
+            data=json.dumps(self.invalid_payload_missing_company_name),
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['error'], 'Nome da empresa é obrigatório')
+        
+    def test_create_company_missing_user_name(self):
+        response = self.client.post(
+            self.create_url,
+            data=json.dumps(self.invalid_payload_missing_user_name),
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['error'], 'Nome do usuário é obrigatório')
+                
+    def test_create_company_missing_email(self):
+        response = self.client.post(
+            self.create_url,
+            data=json.dumps(self.invalid_payload_missing_email),
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['error'], 'E-mail é obrigatório')
+        
+    def test_create_company_missing_password(self):
+        response = self.client.post(
+            self.create_url,
+            data=json.dumps(self.invalid_payload_missing_password),
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['error'], 'Senha é obrigatória')
+        
+    def test_create_company_missing_cnpj(self):
+        response = self.client.post(
+            self.create_url,
+            data=json.dumps(self.invalid_payload_missing_cnpj),
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['error'], 'CNPJ é obrigatório')
+        
+    def test_create_company_missing_phone(self):
+        response = self.client.post(
+            self.create_url,
+            data=json.dumps(self.invalid_payload_missing_phone),
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['error'], 'Telefone é obrigatório')
+        
+    def test_create_company_missing_address(self):
+        response = self.client.post(
+            self.create_url,
+            data=json.dumps(self.invalid_payload_missing_address),
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['error'], 'Endereço é obrigatório')
+        
+    def test_create_company_missing_city(self):
+        response = self.client.post(
+            self.create_url,
+            data=json.dumps(self.invalid_payload_missing_city),
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['error'], 'Cidade é obrigatória')
+        
+    def test_create_company_missing_state(self):
+        response = self.client.post(
+            self.create_url,
+            data=json.dumps(self.invalid_payload_missing_state),
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['error'], 'Estado é obrigatório')
+        
+    def test_create_company_missing_postalcode(self):
+        response = self.client.post(
+            self.create_url,
+            data=json.dumps(self.invalid_payload_missing_postalcode),
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['error'], 'CEP é obrigatório')
 
     def test_create_company_existing_cnpj(self):
         response = self.client.post(
             self.create_url,
-            data=json.dumps(self.invalid_payload_cnpj),
+            data=json.dumps(self.invalid_payload_existing_cnpj),
             content_type='application/json'
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -86,7 +285,7 @@ class CreateCompanyTestCase(TestCase):
     def test_create_company_existing_email(self):
         response = self.client.post(
             self.create_url,
-            data=json.dumps(self.invalid_payload_email),
+            data=json.dumps(self.invalid_payload_existing_email),
             content_type='application/json'
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
