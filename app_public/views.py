@@ -65,7 +65,7 @@ def create_company(request):
     
     schema_name = schema_name.replace(' ', '_').lower()
                 
-    company_data = {
+    tenant_data = {
         'schema_name': schema_name,
         'name': company_name,
         'paid_until': date.today()  + timedelta(days=13),
@@ -78,7 +78,7 @@ def create_company(request):
         'is_active': True,
         'email': email,
         'password': password
-        }
+    }
     
     address_data = {
         'address': address,
@@ -88,27 +88,23 @@ def create_company(request):
     }
     
     if Company.objects.filter(cnpj=cnpj).exists():
-        return Response('CNPJ existente', status.HTTP_400_BAD_REQUEST)
+        return Response({'error': 'CNPJ já cadastrado'}, status.HTTP_400_BAD_REQUEST)
     
-    if Client.objects.filter(schema_name=company_name).exists():
-        return Response('Nome da empresa existente', status.HTTP_400_BAD_REQUEST)
+    if Client.objects.filter(name=company_name).exists():
+        return Response({'error': 'Nome da empresa já cadastrado'}, status.HTTP_400_BAD_REQUEST)
     
     if User.objects.filter(email=email).exists():
-        return Response('E-mail existente', status.HTTP_400_BAD_REQUEST)
+        return Response({'error': 'E-mail já cadastrado'}, status.HTTP_400_BAD_REQUEST)
   
     try:
         with transaction.atomic():
-            tenant_serializer = ClientSerializer(data=company_data)
-            tenant = None
-            
+            tenant_serializer = ClientSerializer(data=tenant_data)            
             if tenant_serializer.is_valid():
                 tenant = tenant_serializer.save()
             else:
                 return Response(tenant_serializer.errors, status.HTTP_400_BAD_REQUEST)
                         
             address_serializer = AddressSerializer(data=address_data)
-            address = None
-            
             if address_serializer.is_valid():
                 address = address_serializer.save()
             else:
@@ -123,15 +119,12 @@ def create_company(request):
             }
                                         
             company_serializer = CompanySerializer(data=company_data)
-            company = None
             if company_serializer.is_valid():
                 company = company_serializer.save()
             else:
                 return Response(company_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
                         
-            user_serializer = UserSerealizer(data=user_data)
-            user = None
-            
+            user_serializer = UserSerializer(data=user_data)           
             if user_serializer.is_valid():
                 user = user_serializer.save()
             else:
@@ -149,7 +142,9 @@ def create_company(request):
             
         return Response('Empresa cadastrada com sucesso', status.HTTP_201_CREATED)
     except ValueError as e:
-        return Response(e, status.HTTP_400_BAD_REQUEST)
+        return Response({'error': str(e)}, status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['PUT'])
@@ -158,40 +153,29 @@ def create_company(request):
 def edit_company(request):
     try:
         company = get_company(request.user.id)
-        address = Address.objects.get(id=company.address_id)
     except Company.DoesNotExist:
         return Response({'error': 'Empresa não encontrada'}, status=status.HTTP_404_NOT_FOUND)
-    except Address.DoesNotExist:
-        return Response({'error': 'Endereço não encontrado'}, status=status.HTTP_404_NOT_FOUND)
     
     data = request.data
 
-    # Manually update the fields
-    company.name = data.get('company_name', company.name)
-    company.cnpj = data.get('cnpj', company.cnpj)
-    company.phone = data.get('phone', company.phone)
-    address.address = data.get('address', address.address)
-    address.city = data.get('city', address.city)   
-    address.state = data.get('state', address.state)
-    address.postalcode = data.get('postalcode', address.postalcode)
+    # Use the updated CompanySerializer to handle nested updates
+    company_serializer = CompanySerializer(company, data=data, partial=True)
 
-    try:
-        company.save()
-        address.save()
-        return Response({'message': 'Empresa atualizada com sucesso'},
-        status=status.HTTP_200_OK)
-    except Exception as e:
-        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    if company_serializer.is_valid():
+        company_serializer.save()
+        return Response({'message': 'Empresa atualizada com sucesso'}, status=status.HTTP_200_OK)
+    else:
+        return Response(company_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-def edit_user(request):
-    data = json.loads(request.body)
-    user = User.objects.get(id=data['id'])
-    serializer = UserSerealizer(user, data=data)
+# def edit_user(request):
+#     data = json.loads(request.body)
+#     user = User.objects.get(id=data['id'])
+#     serializer = UserSerializer(user, data=data)
     
-    if serializer.is_valid():
-        serializer.save()
-        return Response(serializer.data)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+#     if serializer.is_valid():
+#         serializer.save()
+#         return Response(serializer.data)
+#     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
    
 @api_view(['POST'])
 def create_token(request):

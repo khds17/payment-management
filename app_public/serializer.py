@@ -19,7 +19,7 @@ class ClientSerializer(serializers.ModelSerializer):
         model = Client
         fields = '__all__'
         
-class UserSerealizer(serializers.ModelSerializer):
+class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['first_name', 'username', 'email', 'password', 'is_active']
