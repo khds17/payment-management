@@ -147,26 +147,65 @@ def create_company(request):
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+# E se passar request.body sem nenhum parâmetro?
 @api_view(['PUT'])
 @authentication_classes([SessionAuthentication, TokenAuthentication])
 @permission_classes([IsAuthenticated])
-def edit_company(request):
-    try:
-        company = get_company(request.user.id)
-    except Company.DoesNotExist:
+def edit_company(request):    
+    try :
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return Response({'error': 'Nenhum dado foi enviado'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    company_name = data.get('company_name')
+    cnpj = data.get('cnpj')
+    phone = data.get('phone')
+    address = data.get('address')
+    city = data.get('city')
+    state = data.get('state')
+    postalcode = data.get('postalcode')
+
+    company_data = {
+        'name': company_name,
+        'cnpj': cnpj,
+        'phone': phone,
+    }
+
+    address_data = {
+        'address': address,
+        'city': city,
+        'state': state,
+        'postalcode': postalcode
+    }
+    
+    company = get_company(request.user.id)        
+        
+    if company is None:
         return Response({'error': 'Empresa não encontrada'}, status=status.HTTP_404_NOT_FOUND)
     
-    data = request.data
-
-    # Use the updated CompanySerializer to handle nested updates
-    company_serializer = CompanySerializer(company, data=data, partial=True)
-
-    if company_serializer.is_valid():
-        company_serializer.save()
-        return Response({'message': 'Empresa atualizada com sucesso'}, status=status.HTTP_200_OK)
-    else:
-        return Response(company_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+    address = Address.objects.get(id=company.address_id)
+    
+    if address is None:
+        return Response({'error': 'Endereço não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+            
+    try:                
+        with transaction.atomic():
+            company_serializer = CompanySerializer(company, data=company_data, partial=True)
+            if company_serializer.is_valid():
+                company_serializer.save()
+            else:
+                return Response(company_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
+            address_serializer = AddressSerializer(address, data=address_data, partial=True)
+            if address_serializer.is_valid():
+                address_serializer.save()
+            else:
+                return Response(address_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
+            return Response({'message': 'Empresa atualizada com sucesso'}, status=status.HTTP_200_OK)    
+    except ValueError as e:
+        return Response({'error': str(e)}, status.HTTP_400_BAD_REQUEST)
+    
 # def edit_user(request):
 #     data = json.loads(request.body)
 #     user = User.objects.get(id=data['id'])
@@ -189,9 +228,11 @@ def create_token(request):
     return Response({'token': token.key}, status.HTTP_201_CREATED)
 
 def get_company(data):
+    try: 
+        user_company = UserCompany.objects.get(user=data)
     
-    user_company = UserCompany.objects.get(user=data)
+        company = Company.objects.get(id=user_company.company.id)
     
-    company = Company.objects.get(id=user_company.company.id)
-    
-    return company
+        return company
+    except UserCompany.DoesNotExist:
+        return None

@@ -15,14 +15,18 @@ import json
 @authentication_classes([SessionAuthentication, TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def create_service(request):  
+    data = json.loads(request.body)
+    
     try:
         tenant = get_tenant(request.user.id)
     except Client.DoesNotExist:
         return Response({'error': 'Usuário não encontrado'}, status=status.HTTP_404_NOT_FOUND)
-    
-    data = json.loads(request.body)
         
     name = data.get('name')
+    
+    if name is None:
+        return Response({'error': 'Nome do serviço é obrigatório'}, status.HTTP_400_BAD_REQUEST)
+    
     description = data.get('description')
     
     service = {
@@ -32,7 +36,7 @@ def create_service(request):
     
     with schema_context(tenant.schema_name):
         if Service.objects.filter(name=name).exists():
-            return Response('Serviço com nome existente', status.HTTP_400_BAD_REQUEST)  
+            return Response({'error': 'Serviço com nome existente'}, status.HTTP_400_BAD_REQUEST)  
     
         try:
             with transaction.atomic():
@@ -50,8 +54,10 @@ def create_service(request):
 @authentication_classes([SessionAuthentication, TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def get_all_services(request):
-    tenant = get_tenant(request.user.id)
-    id = request.data.get('name')
+    try:
+        tenant = get_tenant(request.user.id)
+    except Client.DoesNotExist:
+        return Response({'error': 'Usuário não encontrado'}, status=status.HTTP_404_NOT_FOUND)
     
     with schema_context(tenant.schema_name):
         services = Service.objects.all()
@@ -66,13 +72,22 @@ def get_all_services(request):
 def edit_service(request):
     data = json.loads(request.body)
     
-    tenant = get_tenant(request.user.id)
-    
+    try:
+        tenant = get_tenant(request.user.id)
+    except Client.DoesNotExist:
+        return Response({'error': 'Usuário não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+        
     id = data.get('id')
     name = data.get('name')
     description = data.get('description')
     service_status = data.get('status')
     
+    if id is None:
+        return Response({'error': 'ID do serviço é um campo obrigatório'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    if name is None:
+        return Response({'error': 'Nome do serviço é um campo obrigatório'}, status=status.HTTP_400_BAD_REQUEST)
+
     service = {
         'name': name,
         'description': description,
@@ -99,11 +114,13 @@ def edit_service(request):
 def create_plan(request):
     data = json.loads(request.body)
     tenant = get_tenant(request.user.id)
+    
     plan_name = data.get('name')
     plan_description = data.get('description')
     
     if plan_name is None:
-        return Response('Nome do plano é obrigatório', status.HTTP_400_BAD_REQUEST)
+        
+        return Response({'error': 'Nome do plano é obrigatório'}, status.HTTP_400_BAD_REQUEST)
         
     plan_data = {
         'name': plan_name,
@@ -113,11 +130,12 @@ def create_plan(request):
     plan_services_data = data.get('services')
     
     if plan_services_data is None:
-        return Response('Serviços são obrigatórios', status.HTTP_400_BAD_REQUEST)
+        
+        return Response({'error': 'Serviços são obrigatórios'}, status.HTTP_400_BAD_REQUEST)
                
     with schema_context(tenant.schema_name):    
         if Plan.objects.filter(name=plan_name).exists():
-            return Response('Plano com nome existente', status.HTTP_400_BAD_REQUEST)  
+            return Response({'error': 'Plano com nome existente'}, status.HTTP_400_BAD_REQUEST)  
         
         try:
             with transaction.atomic():
@@ -177,6 +195,13 @@ def edit_plan(request):
     
     tenant = get_tenant(request.user.id)
     
+    if data.get('id') is None:
+        return Response({'error': 'ID do plano é um campo obrigatório'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    if data.get('name') is None:
+        return Response({'error': 'Nome do plano é um campo obrigatório'}, status=status.HTTP_400_BAD_REQUEST)
+                        
+                            
     id = data.get('id')
     name = data.get('name')
     description = data.get('description')
@@ -190,7 +215,7 @@ def edit_plan(request):
         try:
             plan = Plan.objects.get(id=id)
         except Plan.DoesNotExist:
-            return Response('Plano não encontrado', status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'Plano não encontrado'}, status=status.HTTP_404_NOT_FOUND)
         
         plan_serializer = PlanSerializer(plan, data=data)
 
@@ -268,6 +293,45 @@ def add_service_to_plan(request):
             return Response('Serviço adicionado ao plano com sucesso', status=status.HTTP_201_CREATED)
         except ValueError as e:
             return Response(e, status=status.HTTP_400_BAD_REQUEST)
+        
+# def edit_plan_service(request):
+#     data = json.loads(request.body)
+    
+#     tenant = get_tenant(request.user.id)
+    
+#     if data.get('id') is None:
+#         return Response({'error': 'ID do serviço é um campo obrigatório'}, status=status.HTTP_400_BAD_REQUEST)
+    
+#     if data.get('price') is None:
+#         return Response({'error': 'Preço é um campo obrigatório'}, status=status.HTTP_400_BAD_REQUEST)
+    
+#     if data.get('quantity') is None:
+#         return Response({'error': 'Quantidade é um campo obrigatório'}, status=status.HTTP_400_BAD_REQUEST)
+        
+#     id = data.get('id')
+#     price = data.get('price')
+#     quantity = data.get('quantity')
+#     description = data.get('description')
+    
+#     plan_service = {
+#         'price': price,
+#         'quantity': quantity,
+#         'description': description,
+#     }
+    
+#     with schema_context(tenant.schema_name):
+#         try:
+#             plan_service = PlanService.objects.get(id=id)
+#         except PlanService.DoesNotExist:
+#             return Response({'error': 'Serviço do plano não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+        
+#         plan_service_serializer = PlanServiceSerializer(data=plan_service)
+
+#         if plan_service_serializer.is_valid():
+#             plan_service_serializer.save()
+#             return Response('Serviço do plano alterado com sucesso', status=status.HTTP_200_OK)
+#         else:
+#             return Response(plan_service_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 
 def get_tenant(data):

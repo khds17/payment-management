@@ -1,6 +1,7 @@
 from django.test import TestCase, Client
 from django.urls import reverse
 from django.contrib.auth.models import User
+from app_public.models import Company
 from rest_framework import status
 import json
 
@@ -313,45 +314,47 @@ class CreateCompanyTestCase(TestCase):
         self.assertEqual(response.data['error'], 'E-mail já cadastrado')
 
 class CreateTokenTestCase(TestCase):
-            def setUp(self):
-                self.client = Client()
-                self.token_url = reverse('token')
-                self.user = User.objects.create_user(
-                    username='testuser',
-                    email='testuser@example.com',
-                    password='password123'
-                )
+    def setUp(self):
+        self.client = Client()
+        self.token_url = reverse('token')
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='testuser@example.com',
+            password='password123'
+        )
 
-            def test_create_token_success(self):
-                response = self.client.post(
-                    self.token_url,
-                    data=json.dumps({'email': 'testuser@example.com', 'password': 'password123'}),
-                    content_type='application/json'
-                )
-                self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-                self.assertIn('token', response.data)
+    def test_create_token_success(self):
+        response = self.client.post(
+            self.token_url,
+            data=json.dumps({'email': 'testuser@example.com', 'password': 'password123'}),
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertIn('token', response.data)
 
-            def test_create_token_invalid_password(self):
-                response = self.client.post(
-                    self.token_url,
-                    data=json.dumps({'email': 'testuser@example.com', 'password': 'wrongpassword'}),
-                    content_type='application/json'
-                )
-                self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-                self.assertEqual(response.data, 'Senha incorreta')
+    def test_create_token_invalid_password(self):
+        response = self.client.post(
+            self.token_url,
+            data=json.dumps({'email': 'testuser@example.com', 'password': 'wrongpassword'}),
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data, 'Senha incorreta')
 
-            def test_create_token_nonexistent_user(self):
-                response = self.client.post(
-                    self.token_url,
-                    data=json.dumps({'email': 'nonexistent@example.com', 'password': 'password123'}),
-                    content_type='application/json'
-                )
-                self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+    def test_create_token_nonexistent_user(self):
+        response = self.client.post(
+            self.token_url,
+            data=json.dumps({'email': 'nonexistent@example.com', 'password': 'password123'}),
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+                
 class EditCompanyTestCase(TestCase):
     def setUp(self):
         self.client = Client()
         self.edit_url = reverse('edit')
         self.create_url = reverse('create')
+        self.token_url = reverse('token')
         self.fake_user = {
             'name': 'FakeUser',
             'company_name': 'Fake Company',
@@ -364,22 +367,7 @@ class EditCompanyTestCase(TestCase):
             'state': 'Test State',
             'postalcode': '12345'
         }
-        
-        self.client.post(
-            self.create_url,
-            data=json.dumps(self.fake_user),
-            content_type='application/json'
-        )
-        
-        self.token_url = reverse('token')
-        self.token = self.client.post(
-            self.token_url,
-            data=json.dumps({'email': 'fake@example.com', 'password': 'password123'}),
-            content_type='application/json'
-        )
-
-    def test_edit_company_success(self):
-        valid_payload = {
+        self.valid_payload = {
             'company_name': 'Updated Company',
             'cnpj': '31783287000105',
             'phone': '12934567890',
@@ -388,52 +376,48 @@ class EditCompanyTestCase(TestCase):
             'state': 'Updated State',
             'postalcode': '67890'
         }
-
+        self.invalid_payload = {
+            'company_name': 'Invalid Company',
+            'cnpj': '15203628000161',
+            'phone': '12934567890',
+            'address': '456 Updated St',
+            'city': 'Updated City',
+            'state': 'Updated State',
+            'postalcode': '67890'
+        }
+        self.client.post(
+            self.create_url,
+            data=json.dumps(self.fake_user),
+            content_type='application/json'
+        ) 
+        self.token = self.client.post(
+            self.token_url,
+            data=json.dumps({'email': 'fake@example.com', 'password': 'password123'}),
+            content_type='application/json'
+        )
+            
+    def test_edit_company_success(self):
         response = self.client.put(
             self.edit_url,
-            data=json.dumps(valid_payload),
+            data=json.dumps(self.valid_payload),
             content_type='application/json',
             headers={'Authorization': 'Token ' + self.token.data['token']}
-        )
-                
+        )   
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['message'], 'Empresa atualizada com sucesso')
 
-    # def test_edit_company_not_found(self):
-    #     response = self.client.put(
-    #         self.edit_url,
-    #         data=json.dumps({}),
-    #         content_type='application/json',
-    #     )
-    #     self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-    #     self.assertEqual(response.data['error'], 'Empresa não encontrada')
-
-    # def test_edit_address_not_found(self):
-    #     self.address.delete()
-    #     response = self.client.put(
-    #         self.edit_url,
-    #         data=json.dumps({}),
-    #         content_type='application/json'
-    #     )
-    #     self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-    #     self.assertEqual(response.data['error'], 'Endereço não encontrado')
-
-    # def test_edit_company_invalid_data(self):
-    #     invalid_payload = {
-    #         'company_name': '',
-    #         'cnpj': 'invalid_cnpj',
-    #         'phone': 'invalid_phone',
-    #         'address': '',
-    #         'city': '',
-    #         'state': '',
-    #         'postalcode': ''
-    #     }
-    #     response = self.client.put(
-    #         self.edit_url,
-    #         data=json.dumps(invalid_payload),
-    #         content_type='application/json'
-    #     )
-    #     self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    def test_edit_company_not_found(self):
+        Company.objects.get().delete()
+        
+        response = self.client.put(
+            self.edit_url,
+            data=json.dumps(self.invalid_payload),
+            content_type='application/json',
+            HTTP_AUTHORIZATION='Token ' + self.token.data['token']
+        )
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data['error'], 'Empresa não encontrada')
+    
 
                 
                 

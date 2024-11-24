@@ -72,7 +72,7 @@ class CreateServiceTestCase(TestCase):
             headers={'Authorization': f"Token {self.token.data['token']}"}
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data, 'Serviço com nome existente')
+        self.assertEqual(response.data['error'], 'Serviço com nome existente')
 
     def test_create_service_missing_name(self):
         response = self.client.post(
@@ -82,7 +82,7 @@ class CreateServiceTestCase(TestCase):
             headers={'Authorization': f"Token {self.token.data['token']}"}
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('name', response.data)
+        self.assertEqual(response.data['error'], 'Nome do serviço é obrigatório')
 
     def test_create_service_wrong_token(self):
         response = self.client.post(
@@ -205,6 +205,11 @@ class EditServiceTestCase(TestCase):
             'description': 'Updated Description',
             'status': 'false'
         }
+        self.invalid_payload_missing_id = {
+            'name': 'Updated Service',
+            'description': 'Updated Description',
+            'status': 'active'
+        }
         self.invalid_payload_missing_name = {
             'id': 1,
             'description': 'Updated Description',
@@ -246,6 +251,16 @@ class EditServiceTestCase(TestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, 'Serviço alterado com sucesso')
+        
+    def test_edit_service_missing_id(self):
+        response = self.client.put(
+            self.edit_service_url,
+            data=json.dumps(self.invalid_payload_missing_id),
+            content_type='application/json',
+            headers={'Authorization': f"Token {self.token.data['token']}"}
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['error'], 'ID do serviço é um campo obrigatório')
 
     def test_edit_service_missing_name(self):
         response = self.client.put(
@@ -255,8 +270,8 @@ class EditServiceTestCase(TestCase):
             headers={'Authorization': f"Token {self.token.data['token']}"}
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('name', response.data)
-
+        self.assertEqual(response.data['error'], 'Nome do serviço é um campo obrigatório')
+        
     def test_edit_service_nonexistent_id(self):
         response = self.client.put(
             self.edit_service_url,
@@ -394,7 +409,7 @@ class CreatePlanTestCase(TestCase):
             headers={'Authorization': f"Token {self.token.data['token']}"}
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data, 'Nome do plano é obrigatório')
+        self.assertEqual(response.data['error'], 'Nome do plano é obrigatório')
 
     def test_create_plan_missing_services(self):
         response = self.client.post(
@@ -404,7 +419,7 @@ class CreatePlanTestCase(TestCase):
             headers={'Authorization': f"Token {self.token.data['token']}"}
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data, 'Serviços são obrigatórios')
+        self.assertEqual(response.data['error'], 'Serviços são obrigatórios')
 
     def test_create_plan_existing_name(self):
         self.client.post(
@@ -420,7 +435,7 @@ class CreatePlanTestCase(TestCase):
             headers={'Authorization': f"Token {self.token.data['token']}"}
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data, 'Plano com nome existente')
+        self.assertEqual(response.data['error'], 'Plano com nome existente')
 
     def test_create_plan_wrong_token(self):
         response = self.client.post(
@@ -573,6 +588,10 @@ class EditPlanTestCase(TestCase):
             'name': 'Updated Plan',
             'description': 'Updated Description'
         }
+        self.invalid_payload_missing_id = {
+            'name': 'Updated Plan',
+            'description': 'Updated Description'
+        }
         self.invalid_payload_missing_name = {
             'id': 1,
             'description': 'Updated Description'
@@ -626,6 +645,16 @@ class EditPlanTestCase(TestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, 'Plano alterado com sucesso')
+        
+    def test_edit_plan_missing_id(self):
+        response = self.client.put(
+            self.edit_plan_url,
+            data=json.dumps(self.invalid_payload_missing_id),
+            content_type='application/json',
+            headers={'Authorization': f"Token {self.token.data['token']}"}
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['error'], 'ID do plano é um campo obrigatório')
 
     def test_edit_plan_missing_name(self):
         response = self.client.put(
@@ -635,7 +664,7 @@ class EditPlanTestCase(TestCase):
             headers={'Authorization': f"Token {self.token.data['token']}"}
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('name', response.data)
+        self.assertEqual(response.data['error'], 'Nome do plano é um campo obrigatório')
 
     def test_edit_plan_nonexistent_id(self):
         response = self.client.put(
@@ -645,7 +674,7 @@ class EditPlanTestCase(TestCase):
             headers={'Authorization': f"Token {self.token.data['token']}"}
         )
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(response.data, 'Plano não encontrado')
+        self.assertEqual(response.data['error'], 'Plano não encontrado')
 
     def test_edit_plan_wrong_token(self):
         response = self.client.put(
@@ -975,6 +1004,124 @@ class AddServiceToPlanTestCase(TestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['detail'], 'Invalid token.')
+        
+# class EditPlanServiceTestCase(TestCase):
+#     def setUp(self):
+#         self.client = Client()
+#         self.edit_plan_service_url = reverse('edit_plan_service')
+#         self.create_url = reverse('create')
+#         self.create_service_url = reverse('create_service')
+#         self.create_plan_url = reverse('create_plan')
+#         self.fake_user = {
+#             'name': 'FakeUser',
+#             'company_name': 'Fake Company',
+#             'email': 'fake@example.com',
+#             'password': 'password123',
+#             'phone': '12934567890',
+#             'cnpj': '12345678901230',
+#             'address': '123 Test St',
+#             'city': 'Test City',
+#             'state': 'Test State',
+#             'postalcode': '12345'
+#         }
+#         self.service_one = {
+#             'name': 'Test Service',
+#             'description': 'Test Description'
+#         }
+#         self.plan = {
+#             'name': 'Test Plan',
+#             'description': 'Test Description',
+#             'services': [
+#                 {
+#                     'id': 1,
+#                     'price': 100.0,
+#                     'quantity': 2,
+#                     'description': 'Service Description'
+#                 }
+#             ]
+#         }
+#         self.valid_payload = {
+#             'id': 1,
+#             'price': 200.0,
+#             'quantity': 3,
+#             'description': 'Updated Service Description'
+#         }
+#         self.invalid_payload_nonexistent_id = {
+#             'id': 999,
+#             'price': 200.0,
+#             'quantity': 3,
+#             'description': 'Updated Service Description'
+#         }
+#         self.invalid_payload_missing_id = {
+#             'quantity': 3,
+#             'description': 'Updated Service Description'
+#         }
+#         self.client.post(
+#             self.create_url,
+#             data=json.dumps(self.fake_user),
+#             content_type='application/json'
+#         )
+        
+#         self.token_url = reverse('token')
+#         self.token = self.client.post(
+#             self.token_url,
+#             data=json.dumps({'email': 'fake@example.com', 'password': 'password123'}),
+#             content_type='application/json'
+#         )
+        
+#         self.client.post(
+#             self.create_service_url,
+#             data=json.dumps(self.service_one),
+#             content_type='application/json',
+#             headers={'Authorization': f"Token {self.token.data['token']}"}
+#         )
+        
+#         self.client.post(
+#             self.create_plan_url,
+#             data=json.dumps(self.plan),
+#             content_type='application/json',
+#             headers={'Authorization': f"Token {self.token.data['token']}"}
+#         )
+
+#     def test_edit_plan_service_success(self):
+#         response = self.client.put(
+#             self.edit_plan_service_url,
+#             data=json.dumps(self.valid_payload),
+#             content_type='application/json',
+#             headers={'Authorization': f"Token {self.token.data['token']}"}
+#         )
+#         self.assertEqual(response.status_code, status.HTTP_200_OK)
+#         self.assertEqual(response.data, 'Serviço do plano alterado com sucesso')
+
+#     def test_edit_plan_service_nonexistent_id(self):
+#         response = self.client.put(
+#             self.edit_plan_service_url,
+#             data=json.dumps(self.invalid_payload_nonexistent_id),
+#             content_type='application/json',
+#             headers={'Authorization': f"Token {self.token.data['token']}"}
+#         )
+#         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+#         self.assertEqual(response.data['error'], 'Serviço do plano não encontrado')
+
+#     def test_edit_plan_service_missing_id(self):
+#         response = self.client.put(
+#             self.edit_plan_service_url,
+#             data=json.dumps(self.invalid_payload_missing_id),
+#             content_type='application/json',
+#             headers={'Authorization': f"Token {self.token.data['token']}"}
+#         )
+#         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+#         self.assertEqual(response.data['error'], 'ID do serviço é um campo obrigatório')
+
+#     def test_edit_plan_service_wrong_token(self):
+#         response = self.client.put(
+#             self.edit_plan_service_url,
+#             data=json.dumps(self.valid_payload),
+#             content_type='application/json',
+#             headers={'Authorization': 'Token 3be1db43f5107736135956946f4a35f1031fba82'}
+#         )
+#         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+#         self.assertEqual(response.data['detail'], 'Invalid token.')
 
 
 
