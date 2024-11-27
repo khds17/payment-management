@@ -8,16 +8,14 @@ from .models import *
 from django.contrib.auth.models import User
 from .serializer import *
 from datetime import timedelta, date
-from core.utils import get_company
-
-import json
+from core.utils import get_company, json_load
 
 
 # Verificar o pq não cadastra usuário com mesmo nome
 # Está criando o tenant mesmo com erro.
 @api_view(['POST'])
 def create_company(request):
-    data = json.loads(request.body)
+    data = json_load(request)
     
     company_name = data.get('company_name')
     schema_name = data.get('company_name')
@@ -150,10 +148,7 @@ def create_company(request):
 @authentication_classes([SessionAuthentication, TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def edit_company(request):    
-    try :
-        data = json.loads(request.body)
-    except json.JSONDecodeError:
-        return Response({'error': 'Nenhum dado foi enviado'}, status=status.HTTP_400_BAD_REQUEST)
+    data = json_load(request)
     
     company_name = data.get('company_name')
     cnpj = data.get('cnpj')
@@ -213,5 +208,7 @@ def edit_company(request):
 #         serializer.save()
 #         return Response(serializer.data)
 #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
    
 

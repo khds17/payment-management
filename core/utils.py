@@ -5,6 +5,7 @@ from rest_framework import status
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.models import User
 from app_public.models import UserCompany, Company, Client
+import json
 
 
 @api_view(['POST'])
@@ -37,3 +38,10 @@ def get_tenant(data):
     tenant = Client.objects.get(id=company.tenant_id)
         
     return tenant
+
+def json_load(request):
+    try :
+        data = json.loads(request.body)
+        return data
+    except json.JSONDecodeError:
+        return Response({'error': 'Nenhum dado foi enviado'}, status=status.HTTP_400_BAD_REQUEST)

@@ -8,15 +8,14 @@ from django.db import transaction
 from .models import *
 from app_public.models import *
 from django_tenants.utils import schema_context
-from core.utils import get_tenant
-import json 
+from core.utils import get_tenant, json_load
 
 
 @api_view(['POST'])
 @authentication_classes([SessionAuthentication, TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def create_service(request):  
-    data = json.loads(request.body)
+    data = json_load(request)
     
     try:
         tenant = get_tenant(request.user.id)
@@ -71,7 +70,7 @@ def get_all_services(request):
 @authentication_classes([SessionAuthentication, TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def edit_service(request):
-    data = json.loads(request.body)
+    data = json_load(request)
     
     try:
         tenant = get_tenant(request.user.id)
@@ -113,7 +112,7 @@ def edit_service(request):
 @authentication_classes([SessionAuthentication, TokenAuthentication])
 @permission_classes([IsAuthenticated])        
 def create_plan(request):
-    data = json.loads(request.body)
+    data = json_load(request)
     tenant = get_tenant(request.user.id)
     
     plan_name = data.get('name')
@@ -192,7 +191,7 @@ def get_all_plans(request):
 @authentication_classes([SessionAuthentication, TokenAuthentication])
 @permission_classes([IsAuthenticated])    
 def edit_plan(request):
-    data = json.loads(request.body)
+    data = json_load(request)
     
     tenant = get_tenant(request.user.id)
     
@@ -248,7 +247,7 @@ def get_all_plan_services(request):
 @authentication_classes([SessionAuthentication, TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def add_service_to_plan(request):
-    data = json.loads(request.body)
+    data = json_load(request)
     
     tenant = get_tenant(request.user.id)
         
@@ -296,7 +295,7 @@ def add_service_to_plan(request):
             return Response(e, status=status.HTTP_400_BAD_REQUEST)
         
 # def edit_plan_service(request):
-#     data = json.loads(request.body)
+#     data = json_load(request)
     
 #     tenant = get_tenant(request.user.id)
     
