@@ -8,6 +8,7 @@ from django.db import transaction
 from .models import *
 from app_public.models import *
 from django_tenants.utils import schema_context
+from core.utils import get_tenant
 import json 
 
 
@@ -334,13 +335,5 @@ def add_service_to_plan(request):
 #             return Response(plan_service_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 
-def get_tenant(data):
-    
-    user_company = UserCompany.objects.get(user=data)
-    
-    company = Company.objects.get(id=user_company.company.id)
-    
-    tenant = Client.objects.get(id=company.tenant_id)
-        
-    return tenant
+
     

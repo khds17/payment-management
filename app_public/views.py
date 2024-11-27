@@ -7,15 +7,13 @@ from django.db import transaction
 from .models import *
 from django.contrib.auth.models import User
 from .serializer import *
-from django.shortcuts import get_object_or_404
-from rest_framework.authtoken.models import Token
 from datetime import timedelta, date
+from core.utils import get_company
 
 import json
 
 
-#Verificar o pq não cadastra usuário com mesmo nome
-# Verificar se está criptografando a senha
+# Verificar o pq não cadastra usuário com mesmo nome
 # Está criando o tenant mesmo com erro.
 @api_view(['POST'])
 def create_company(request):
@@ -216,23 +214,4 @@ def edit_company(request):
 #         return Response(serializer.data)
 #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
    
-@api_view(['POST'])
-def create_token(request):
-    user = get_object_or_404(User, email=request.data['email'])
-    
-    if not user.check_password(request.data['password']):
-        return Response('Senha incorreta', status.HTTP_404_NOT_FOUND)
 
-    token, created = Token.objects.get_or_create(user=user)     
-        
-    return Response({'token': token.key}, status.HTTP_201_CREATED)
-
-def get_company(data):
-    try: 
-        user_company = UserCompany.objects.get(user=data)
-    
-        company = Company.objects.get(id=user_company.company.id)
-    
-        return company
-    except UserCompany.DoesNotExist:
-        return None
