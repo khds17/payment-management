@@ -194,7 +194,7 @@ class CreateCompanyTestCase(TestCase):
             content_type='application/json'
         )
 
-        user = User.objects.get(username='TestUser')
+        user = User.objects.get(first_name='TestUser')
         company = Company.objects.get(name='Test Company')
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -213,7 +213,7 @@ class CreateCompanyTestCase(TestCase):
         self.assertEqual(company.tenant.on_trial, True)
         self.assertEqual(company.tenant.paid_until, date.today()  + timedelta(days=13))
         self.assertEqual(User.objects.count(), 2)
-        self.assertEqual(user.username, 'TestUser')
+        # self.assertEqual(user.username, 'TestUser')
         self.assertEqual(user.first_name, 'TestUser')
         self.assertEqual(user.email, 'test@example.com')
         self.assertEqual(user.is_active, True)
@@ -226,7 +226,7 @@ class CreateCompanyTestCase(TestCase):
             content_type='application/json'
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data['error'], 'Nome da empresa é obrigatório')
+        self.assertEqual(response.data['error'], 'company_name is required')
         
     def test_create_company_missing_user_name(self):
         response = self.client.post(
@@ -235,7 +235,7 @@ class CreateCompanyTestCase(TestCase):
             content_type='application/json'
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data['error'], 'Nome do usuário é obrigatório')
+        self.assertEqual(response.data['error'], 'name is required')
                 
     def test_create_company_missing_email(self):
         response = self.client.post(
@@ -244,7 +244,7 @@ class CreateCompanyTestCase(TestCase):
             content_type='application/json'
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data['error'], 'E-mail é obrigatório')
+        self.assertEqual(response.data['error'], 'email is required')
         
     def test_create_company_missing_password(self):
         response = self.client.post(
@@ -253,7 +253,7 @@ class CreateCompanyTestCase(TestCase):
             content_type='application/json'
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data['error'], 'Senha é obrigatória')
+        self.assertEqual(response.data['error'], 'password is required')
         
     def test_create_company_missing_cnpj(self):
         response = self.client.post(
@@ -262,7 +262,7 @@ class CreateCompanyTestCase(TestCase):
             content_type='application/json'
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data['error'], 'CNPJ é obrigatório')
+        self.assertEqual(response.data['error'], 'cnpj is required')
         
     def test_create_company_missing_phone(self):
         response = self.client.post(
@@ -271,7 +271,7 @@ class CreateCompanyTestCase(TestCase):
             content_type='application/json'
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data['error'], 'Telefone é obrigatório')
+        self.assertEqual(response.data['error'], 'phone is required')
         
     def test_create_company_missing_address(self):
         response = self.client.post(
@@ -280,7 +280,7 @@ class CreateCompanyTestCase(TestCase):
             content_type='application/json'
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data['error'], 'Endereço é obrigatório')
+        self.assertEqual(response.data['error'], 'address is required')
         
     def test_create_company_missing_city(self):
         response = self.client.post(
@@ -289,7 +289,7 @@ class CreateCompanyTestCase(TestCase):
             content_type='application/json'
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data['error'], 'Cidade é obrigatória')
+        self.assertEqual(response.data['error'], 'city is required')
         
     def test_create_company_missing_state(self):
         response = self.client.post(
@@ -298,7 +298,7 @@ class CreateCompanyTestCase(TestCase):
             content_type='application/json'
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data['error'], 'Estado é obrigatório')
+        self.assertEqual(response.data['error'], 'state is required')
         
     def test_create_company_missing_postalcode(self):
         response = self.client.post(
@@ -307,7 +307,7 @@ class CreateCompanyTestCase(TestCase):
             content_type='application/json'
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data['error'], 'CEP é obrigatório')
+        self.assertEqual(response.data['error'], 'postalcode is required')
 
     def test_create_company_existing_company_name(self):
         response = self.client.post(
@@ -316,7 +316,7 @@ class CreateCompanyTestCase(TestCase):
             content_type='application/json'
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data['error'], 'Nome da empresa já cadastrado')
+        self.assertEqual(response.data['error'], 'Company name already registered')
         
     def test_create_company_existing_cnpj(self):
         response = self.client.post(
@@ -325,7 +325,7 @@ class CreateCompanyTestCase(TestCase):
             content_type='application/json'
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data['error'], 'CNPJ já cadastrado')
+        self.assertEqual(response.data['error'], 'CNPJ already registered')
 
     def test_create_company_existing_email(self):
         response = self.client.post(
@@ -334,7 +334,7 @@ class CreateCompanyTestCase(TestCase):
             content_type='application/json'
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data['error'], 'E-mail já cadastrado')
+        self.assertEqual(response.data['error'], 'E-mail already registered')
                 
 class EditCompanyTestCase(TestCase):
     def setUp(self):

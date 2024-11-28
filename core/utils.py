@@ -6,6 +6,7 @@ from django.shortcuts import get_object_or_404
 from django.contrib.auth.models import User
 from app_public.models import UserCompany, Company, Client
 import json
+import random
 
 
 @api_view(['POST'])
@@ -45,3 +46,19 @@ def json_load(request):
         return data
     except json.JSONDecodeError:
         return Response({'error': 'Nenhum dado foi enviado'}, status=status.HTTP_400_BAD_REQUEST)
+    
+def delete_created_objects(tenant=None, address=None, company=None, user=None):
+    if tenant:
+        tenant.delete()
+    if address:
+        address.delete()
+    if company:
+        company.delete()
+    if user:
+        user.delete()
+        
+def generate_username(name):
+    username = name.replace(' ', '_').lower()
+    random_number = random.randint(1000, 9999)
+    username = f"{username}_{random_number}"
+    return username
