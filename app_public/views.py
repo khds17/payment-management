@@ -143,7 +143,6 @@ def create_company(request):
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-# E se passar request.body sem nenhum parâmetro?
 @api_view(['PUT'])
 @authentication_classes([SessionAuthentication, TokenAuthentication])
 @permission_classes([IsAuthenticated])
@@ -198,16 +197,29 @@ def edit_company(request):
             return Response({'message': 'Empresa atualizada com sucesso'}, status=status.HTTP_200_OK)    
     except ValueError as e:
         return Response({'error': str(e)}, status.HTTP_400_BAD_REQUEST)
+
+@api_view(['PUT'])
+@authentication_classes([SessionAuthentication, TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def edit_user(request):
+    data = json_load(request)
+          
+    user = User.objects.get(id=request.user.id)
     
-# def edit_user(request):
-#     data = json.loads(request.body)
-#     user = User.objects.get(id=data['id'])
-#     serializer = UserSerializer(user, data=data)
+    user_data = {
+        'username': data.get('name'),
+        'first_name': data.get('name'),
+        'email': data.get('email'),
+        'password': data.get('password'),
+        'is_active': data.get('status')
+    }
+       
+    user_serializer = UserSerializer(user, data=user_data, partial=True)
     
-#     if serializer.is_valid():
-#         serializer.save()
-#         return Response(serializer.data)
-#     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    if user_serializer.is_valid():
+        user_serializer.save()
+        return Response({'message': 'Usuário atualizada com sucesso'}, status=status.HTTP_200_OK)   
+    return Response(user_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
    

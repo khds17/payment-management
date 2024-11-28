@@ -1,8 +1,9 @@
 from django.test import TestCase, Client
 from django.urls import reverse
 from django.contrib.auth.models import User
-from app_public.models import Company
+from app_public.models import Company, Address, Client as Tenant
 from rest_framework import status
+from datetime import timedelta, date
 import json
 
 
@@ -193,7 +194,29 @@ class CreateCompanyTestCase(TestCase):
             content_type='application/json'
         )
 
+        user = User.objects.get(username='TestUser')
+        company = Company.objects.get(name='Test Company')
+
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Company.objects.count(), 2)
+        self.assertEqual(company.name, 'Test Company')   
+        self.assertEqual(company.cnpj, '31783287000105')
+        self.assertEqual(company.phone, 12934567890)
+        self.assertEqual(Address.objects.count(), 2)
+        self.assertEqual(company.address.address, '123 Test St')
+        self.assertEqual(company.address.city, 'Test City')
+        self.assertEqual(company.address.state, 'Test State')
+        self.assertEqual(company.address.postalcode, 12345)
+        self.assertEqual(Tenant.objects.count(), 2)
+        self.assertEqual(company.tenant.schema_name, 'test_company')
+        self.assertEqual(company.tenant.name, 'Test Company')
+        self.assertEqual(company.tenant.on_trial, True)
+        self.assertEqual(company.tenant.paid_until, date.today()  + timedelta(days=13))
+        self.assertEqual(User.objects.count(), 2)
+        self.assertEqual(user.username, 'TestUser')
+        self.assertEqual(user.first_name, 'TestUser')
+        self.assertEqual(user.email, 'test@example.com')
+        self.assertEqual(user.is_active, True)
         self.assertEqual(response.data, 'Empresa cadastrada com sucesso')
         
     def test_create_company_missing_company_name(self):
@@ -381,7 +404,74 @@ class EditCompanyTestCase(TestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data['error'], 'Empresa não encontrada')
-    
+        
+class EditUserTestCase(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.edit_user_url = reverse('edit_user')
+        self.create_url = reverse('create')
+        self.token_url = reverse('token')
+        self.fake_user = {
+            'name': 'FakeUser',
+            'company_name': 'Fake Company',
+            'email': 'fake@example.com',
+            'password': 'password123',
+            'phone': '12934567890',
+            'cnpj': '12345678901230',
+            'address': '123 Test St',
+            'city': 'Test City',
+            'state': 'Test State',
+            'postalcode': '12345'
+        }
+        self.valid_payload = {
+            'name': 'UpdatedUser',
+            'email': 'updated@example.com',
+            'password': 'newpassword123',
+            'status': False
+        }
+        self.invalid_payload_empty_name = {
+            'name': '',
+            'email': 'updated@example.com',
+            'password': 'newpassword123',
+            'is_active': True
+        }
+        self.invalid_payload_empty_email = {
+            'name': 'UpdatedUser',
+            'email': '',
+            'password': 'newpassword123',
+            'is_active': True
+        }
+        self.invalid_payload_empty_password = {
+            'name': 'UpdatedUser',
+            'email': 'updated@example.com',
+            'password': '',
+            'is_active': True
+        }
+        self.invalid_payload_empty_status = {
+            'name': 'UpdatedUser',
+            'email': 'updated@example.com',
+            'password': 'newpassword123',
+            'status': ''
+        }
+        
+        self.client.post(
+            self.create_url,
+            data=json.dumps(self.fake_user),
+            content_type='application/json'
+        )
+        self.token = self.client.post(
+            self.token_url,
+            data=json.dumps({'email': 'fake@example.com', 'password': 'password123'}),
+            content_type='application/json'
+        )
 
-                
-                
+    def test_edit_user_success(self):
+        response = self.client.put(
+            self.edit_user_url,
+            data=json.dumps(self.valid_payload),
+            content_type='application/json',
+            HTTP_AUTHORIZATION='Token ' + self.token.data['token']
+        )
+               
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['message'], 'Usuário atualizada com sucesso')

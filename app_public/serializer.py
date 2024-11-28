@@ -35,6 +35,15 @@ class UserSerializer(serializers.ModelSerializer):
         user.set_password(validated_data['password'])
         user.save()
         return user
+    
+    def update(self, instance, validated_data):
+        instance.first_name = validated_data.get('first_name', instance.first_name)
+        instance.username = validated_data.get('username', instance.username)
+        instance.email = validated_data.get('email', instance.email)
+        instance.is_active = validated_data.get('is_active', instance.is_active)
+        instance.set_password(validated_data.get('password', instance.password))
+        instance.save()
+        return instance
         
 class UserCompanySerializer(serializers.ModelSerializer):
     class Meta:
