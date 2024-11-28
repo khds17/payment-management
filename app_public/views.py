@@ -8,21 +8,17 @@ from .models import *
 from django.contrib.auth.models import User
 from .serializer import *
 from datetime import timedelta, date
-from core.utils import get_company, json_load, delete_created_objects, generate_username
+from core.utils import get_company, json_load, delete_created_objects, generate_username, validate_required_fields
 
 
-
-# Verificar o pq não cadastra usuário com mesmo nome
-# Está criando o tenant mesmo com erro.
 @api_view(['POST'])
 def create_company(request):
     data = json_load(request)  
     
     required_fields = ['company_name', 'name', 'email', 'password', 'address', 'city', 'state', 'postalcode', 'phone', 'cnpj']
-    for field in required_fields:
-        if not data.get(field):
-            return Response({'error': f'{field} is required'}, status=status.HTTP_400_BAD_REQUEST)
-    
+    validation_error = validate_required_fields(data, required_fields)
+    if validation_error:
+        return validation_error   
     
     schema_name = data['company_name'].replace(' ', '_').lower()
     
@@ -60,52 +56,53 @@ def create_company(request):
         return Response({'error': 'E-mail already registered'}, status.HTTP_400_BAD_REQUEST)
   
     try:
-        tenant_serializer = ClientSerializer(data=tenant_data)            
-        if tenant_serializer.is_valid():
-            tenant = tenant_serializer.save()
-        else:
-            return Response(tenant_serializer.errors, status.HTTP_400_BAD_REQUEST)
+        with transaction.atomic():
+            tenant_serializer = ClientSerializer(data=tenant_data)            
+            if tenant_serializer.is_valid():
+                tenant = tenant_serializer.save()
+            else:
+                return Response(tenant_serializer.errors, status.HTTP_400_BAD_REQUEST)
+                        
+            address_serializer = AddressSerializer(data=address_data)
+            if address_serializer.is_valid():
+                address = address_serializer.save()
+            else:
+                delete_created_objects(tenant=tenant)
+                return Response(address_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
                     
-        address_serializer = AddressSerializer(data=address_data)
-        if address_serializer.is_valid():
-            address = address_serializer.save()
-        else:
-            delete_created_objects(tenant=tenant)
-            return Response(address_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-                
-        company_data = {
-            'name': data['company_name'],
-            'cnpj': data['cnpj'],
-            'phone': data['phone'],
-            'tenant': tenant.id,
-            'address': address.id,
-        }
-                                    
-        company_serializer = CompanySerializer(data=company_data)
-        if company_serializer.is_valid():
-            company = company_serializer.save()
-        else:
-            delete_created_objects(tenant=tenant, address=address)
-            return Response(company_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-                    
-        user_serializer = UserSerializer(data=user_data)           
-        if user_serializer.is_valid():
-            user = user_serializer.save()
-        else:
-            delete_created_objects(tenant=tenant, address=address, company=company)
-            return Response(user_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
-        user_company_serializer = UserCompanySerializer(data={
-            'user': user.id,
-            'company': company.id
-        })
-        
-        if user_company_serializer.is_valid():
-            user_company_serializer.save()
-        else:
-            delete_created_objects(tenant=tenant, address=address, company=company, user=user)
-            return Response(user_company_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
+            company_data = {
+                'name': data['company_name'],
+                'cnpj': data['cnpj'],
+                'phone': data['phone'],
+                'tenant': tenant.id,
+                'address': address.id,
+            }
+                                        
+            company_serializer = CompanySerializer(data=company_data)
+            if company_serializer.is_valid():
+                company = company_serializer.save()
+            else:
+                delete_created_objects(tenant=tenant, address=address)
+                return Response(company_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                        
+            user_serializer = UserSerializer(data=user_data)           
+            if user_serializer.is_valid():
+                user = user_serializer.save()
+            else:
+                delete_created_objects(tenant=tenant, address=address, company=company)
+                return Response(user_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
+            user_company_serializer = UserCompanySerializer(data={
+                'user': user.id,
+                'company': company.id
+            })
+            
+            if user_company_serializer.is_valid():
+                user_company_serializer.save()
+            else:
+                delete_created_objects(tenant=tenant, address=address, company=company, user=user)
+                return Response(user_company_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
         return Response('Empresa cadastrada com sucesso', status.HTTP_201_CREATED)
     except Exception as e:
         delete_created_objects(tenant=tenant, address=address, company=company, user=user)

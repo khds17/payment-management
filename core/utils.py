@@ -62,3 +62,9 @@ def generate_username(name):
     random_number = random.randint(1000, 9999)
     username = f"{username}_{random_number}"
     return username
+
+def validate_required_fields(data, required_fields):
+    for field in required_fields:
+        if not data.get(field):
+            return Response({'error': f'{field} is required'}, status=status.HTTP_400_BAD_REQUEST)
+    return None
